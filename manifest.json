@@ -1,0 +1,7 @@
+{
+  "name": "vsql_games",
+  "version": "0.1.0",
+  "description": "A collection of games and solvers, starting with Sudoku.",
+  "author": "Gemini CLI",
+  "license": "GPL-2.0"
+}

@@ -1,0 +1,33 @@
+# Sudoku Solver Basic Test
+--disable_query_log
+INSTALL EXTENSION vsql_games;
+--enable_query_log
+
+# Solve the corrected full puzzle
+SELECT solve_sudoku('
+...26.7.1
+68..7..9.
+19...45..
+82.1...4.
+..46.29..
+.5...3.28
+..93...74
+.4..5..36
+7.3.18...
+') as result;
+
+# Solve with dots and numbers
+SELECT solve_sudoku('53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79') as result;
+
+# Contradictory digits (two 5s in first row)
+SELECT solve_sudoku('55..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79') as result;
+
+# Short input (80 chars)
+SELECT solve_sudoku('12345678912345678912345678912345678912345678912345678912345678912345678912345678') as result;
+
+# Unsolvable puzzle
+SELECT solve_sudoku('5168497323.76.5...8.97...41.34...2.8.5.2.6.9.2.9...5.7...3.1.2.6...2.1.7.9.7.3.56') as result;
+
+--disable_query_log
+UNINSTALL EXTENSION vsql_games;
+--enable_query_log
