@@ -111,12 +111,64 @@ void solve_sudoku_impl(vsql::StringArg puzzle, vsql::StringResult out) try {
   out.error("Internal error in solve_sudoku");
 }
 
+void sudoku_print_impl(vsql::StringArg puzzle, vsql::StringResult out) try {
+  if (puzzle.is_null()) {
+    out.set_null();
+    return;
+  }
+
+  std::string_view input = puzzle.value();
+  if (input.size() != 81) {
+    out.error("print_sudoku requires exactly 81 digits");
+    return;
+  }
+
+  auto buf = out.buffer();
+  // Format: "N N N | N N N | N N N\n" (21 chars) * 9 rows
+  // Plus 2 separator lines: "------+-------+------\n" (22 chars) * 2
+  // Total approx: 189 + 44 = 233 chars.
+  if (buf.size() < 256) {
+    out.error("Output buffer too small for Sudoku print");
+    return;
+  }
+
+  size_t off = 0;
+  for (int r = 0; r < 9; ++r) {
+    if (r > 0 && r % 3 == 0) {
+      const char* sep = "------+-------+------\n";
+      size_t len = 22;
+      memcpy(buf.data() + off, sep, len);
+      off += len;
+    }
+    for (int c = 0; c < 9; ++c) {
+      if (c > 0 && c % 3 == 0) {
+        buf[off++] = '|';
+        buf[off++] = ' ';
+      }
+      buf[off++] = input[r * 9 + c];
+      if (c < 8) {
+        buf[off++] = ' ';
+      }
+    }
+    buf[off++] = '\n';
+  }
+  out.set_length(off);
+} catch (...) {
+  out.error("Internal error in print_sudoku");
+}
+
 VEF_GENERATE_ENTRY_POINTS(
   vsql::make_extension()
     .func(vsql::make_func<&solve_sudoku_impl>("solve_sudoku")
       .returns(vsql::STRING)
       .param(vsql::STRING)
       .buffer_size(81)
+      .deterministic()
+      .build())
+    .func(vsql::make_func<&sudoku_print_impl>("print_sudoku")
+      .returns(vsql::STRING)
+      .param(vsql::STRING)
+      .buffer_size(256)
       .deterministic()
       .build())
 )
