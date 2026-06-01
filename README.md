@@ -28,6 +28,29 @@ Accepts an 81+ character string representing a Sudoku puzzle.
 - Returns the 81-digit solved string.
 - Returns `NULL` if the input is too short (fewer than 81 slots), contains initial contradictions, or is unsolvable.
 
+### print_sudoku(puzzle STRING) -> STRING
+Accepts an 81-digit Sudoku string and returns a formatted 9x9 grid with row and box separators.
+
+**Example:**
+```sql
+SELECT print_sudoku(solve_sudoku('...26.7.168..7..9.19...45..82.1...4...46.29...5...3.28..93...74.4..5..367.3.18...')) as result\G
+```
+
+**Output:**
+```text
+result: 4 3 5 | 2 6 9 | 7 8 1
+6 8 2 | 5 7 1 | 4 9 3
+1 9 7 | 8 3 4 | 5 6 2
+------+-------+------
+8 2 6 | 1 9 5 | 3 4 7
+3 7 4 | 6 8 2 | 9 1 5
+9 5 1 | 7 4 3 | 6 2 8
+------+-------+------
+5 1 9 | 3 2 6 | 8 7 4
+2 4 8 | 9 5 7 | 1 3 6
+7 6 3 | 4 1 8 | 2 5 9
+```
+
 **NULL-handling:** Returns `NULL` if the input is `NULL`.
 
 ## Known Limitations
