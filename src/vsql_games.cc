@@ -23,27 +23,19 @@ namespace {
 
 struct SudokuBoard {
   std::array<int, 81> cells;
+  std::array<int, 9> row_masks;
+  std::array<int, 9> col_masks;
+  std::array<int, 9> box_masks;
 
   static constexpr int idx(int r, int c) { return r * 9 + c; }
-
-  bool is_valid(int row, int col, int val) const {
-    for (int i = 0; i < 9; ++i) {
-      if (cells[idx(row, i)] == val || cells[idx(i, col)] == val) return false;
-    }
-
-    int box_r = (row / 3) * 3;
-    int box_c = (col / 3) * 3;
-    for (int i = 0; i < 3; ++i) {
-      for (int j = 0; j < 3; ++j) {
-        if (cells[idx(box_r + i, box_c + j)] == val) return false;
-      }
-    }
-    return true;
-  }
+  static constexpr int box_idx(int r, int c) { return (r / 3) * 3 + (c / 3); }
 
   bool load(std::string_view input) {
-    int count = 0;
     cells.fill(0);
+    row_masks.fill(0);
+    col_masks.fill(0);
+    box_masks.fill(0);
+    int count = 0;
     for (char c : input) {
       if (count == 81) break;
       if (c == '\r' || c == '\n') continue;
@@ -51,8 +43,15 @@ struct SudokuBoard {
         int val = c - '0';
         int row = count / 9;
         int col = count % 9;
-        if (!is_valid(row, col, val)) return false;
+        int b = box_idx(row, col);
+        int mask = 1 << val;
+        if ((row_masks[row] | col_masks[col] | box_masks[b]) & mask) {
+          return false; // Contradiction!
+        }
         cells[count] = val;
+        row_masks[row] |= mask;
+        col_masks[col] |= mask;
+        box_masks[b] |= mask;
       }
       count++;
     }
@@ -71,11 +70,23 @@ struct SudokuBoard {
 
     int row = index / 9;
     int col = index % 9;
+    int b = box_idx(row, col);
+    int base_mask = row_masks[row] | col_masks[col] | box_masks[b];
+
     for (int val = 1; val <= 9; ++val) {
-      if (is_valid(row, col, val)) {
+      int mask = 1 << val;
+      if (!(base_mask & mask)) {
         cells[index] = val;
+        row_masks[row] |= mask;
+        col_masks[col] |= mask;
+        box_masks[b] |= mask;
+
         if (solve_recursive(index + 1)) return true;
+
         cells[index] = 0;
+        row_masks[row] &= ~mask;
+        col_masks[col] &= ~mask;
+        box_masks[b] &= ~mask;
       }
     }
     return false;
@@ -84,14 +95,10 @@ struct SudokuBoard {
   bool solve() { return solve_recursive(0); }
 
   bool is_complete_and_valid() const {
-    for (int i = 0; i < 81; ++i) {
-      if (cells[i] == 0) return false;
-      int val = cells[i];
-      // Temporarily clear to check validity
-      const_cast<SudokuBoard*>(this)->cells[i] = 0;
-      bool valid = is_valid(i / 9, i % 9, val);
-      const_cast<SudokuBoard*>(this)->cells[i] = val;
-      if (!valid) return false;
+    for (int i = 0; i < 9; ++i) {
+      if (row_masks[i] != 1022 || col_masks[i] != 1022 || box_masks[i] != 1022) {
+        return false;
+      }
     }
     return true;
   }
@@ -129,16 +136,13 @@ void sudoku_print_impl(vsql::StringArg puzzle, vsql::StringResult out) try {
     return;
   }
 
-  std::string_view input = puzzle.value();
-  if (input.size() != 81) {
-    out.error("print_sudoku requires exactly 81 digits");
+  SudokuBoard board;
+  if (!board.load(puzzle.value())) {
+    out.error("print_sudoku requires a valid Sudoku puzzle input (81 cells)");
     return;
   }
 
   auto buf = out.buffer();
-  // Format: "N N N | N N N | N N N\n" (21 chars) * 9 rows
-  // Plus 2 separator lines: "------+-------+------\n" (22 chars) * 2
-  // Total approx: 189 + 44 = 233 chars.
   if (buf.size() < 256) {
     out.error("Output buffer too small for Sudoku print");
     return;
@@ -157,7 +161,8 @@ void sudoku_print_impl(vsql::StringArg puzzle, vsql::StringResult out) try {
         buf[off++] = '|';
         buf[off++] = ' ';
       }
-      buf[off++] = input[r * 9 + c];
+      int val = board.cells[SudokuBoard::idx(r, c)];
+      buf[off++] = (val == 0) ? '.' : static_cast<char>(val + '0');
       if (c < 8) {
         buf[off++] = ' ';
       }

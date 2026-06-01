@@ -28,6 +28,47 @@ SELECT solve_sudoku('12345678912345678912345678912345678912345678912345678912345
 # Unsolvable puzzle
 SELECT solve_sudoku('5168497323.76.5...8.97...41.34...2.8.5.2.6.9.2.9...5.7...3.1.2.6...2.1.7.9.7.3.56') as result;
 
+# print_sudoku tests
+
+# 1. Print unsolved puzzle with newlines and dots
+SELECT print_sudoku('
+...26.7.1
+68..7..9.
+19...45..
+82.1...4.
+..46.29..
+.5...3.28
+..93...74
+.4..5..36
+7.3.18...
+') as result;
+
+# 2. Print solved puzzle
+SELECT print_sudoku('534678912672195348198342567859761423426853791713924856961537284287419635345286179') as result;
+
+# 3. Print invalid size (should fail)
+--error 3200
+SELECT print_sudoku('123456789');
+
+
+# is_valid_sudoku tests
+
+# 1. Valid completed board
+SELECT is_valid_sudoku('534678912672195348198342567859761423426853791713924856961537284287419635345286179') as result;
+
+# 2. Incomplete board (contains dots/zeros)
+SELECT is_valid_sudoku('53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79') as result;
+
+# 3. Invalid board (with contradictions)
+SELECT is_valid_sudoku('55..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79') as result;
+
+# 4. Short input
+SELECT is_valid_sudoku('123456789') as result;
+
+# 5. NULL input
+SELECT is_valid_sudoku(NULL) as result;
+
 --disable_query_log
 UNINSTALL EXTENSION vsql_games;
 --enable_query_log
+
