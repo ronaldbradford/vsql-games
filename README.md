@@ -51,6 +51,9 @@ result: 4 3 5 | 2 6 9 | 7 8 1
 7 6 3 | 4 1 8 | 2 5 9
 ```
 
+### is_valid_sudoku(puzzle STRING) -> INT
+Accepts an 81-character Sudoku string and returns `1` if it is a valid, completed board, or `0` otherwise.
+
 **NULL-handling:** Returns `NULL` if the input is `NULL`.
 
 ## Known Limitations

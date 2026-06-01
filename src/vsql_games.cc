@@ -24,6 +24,23 @@ namespace {
 struct SudokuBoard {
   std::array<int, 81> cells;
 
+  static constexpr int idx(int r, int c) { return r * 9 + c; }
+
+  bool is_valid(int row, int col, int val) const {
+    for (int i = 0; i < 9; ++i) {
+      if (cells[idx(row, i)] == val || cells[idx(i, col)] == val) return false;
+    }
+
+    int box_r = (row / 3) * 3;
+    int box_c = (col / 3) * 3;
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        if (cells[idx(box_r + i, box_c + j)] == val) return false;
+      }
+    }
+    return true;
+  }
+
   bool load(std::string_view input) {
     int count = 0;
     cells.fill(0);
@@ -48,26 +65,6 @@ struct SudokuBoard {
     }
   }
 
-  bool solve() { return solve_recursive(0); }
-
- private:
-  static constexpr int idx(int r, int c) { return r * 9 + c; }
-
-  bool is_valid(int row, int col, int val) const {
-    for (int i = 0; i < 9; ++i) {
-      if (cells[idx(row, i)] == val || cells[idx(i, col)] == val) return false;
-    }
-
-    int box_r = (row / 3) * 3;
-    int box_c = (col / 3) * 3;
-    for (int i = 0; i < 3; ++i) {
-      for (int j = 0; j < 3; ++j) {
-        if (cells[idx(box_r + i, box_c + j)] == val) return false;
-      }
-    }
-    return true;
-  }
-
   bool solve_recursive(int index) {
     if (index == 81) return true;
     if (cells[index] != 0) return solve_recursive(index + 1);
@@ -82,6 +79,21 @@ struct SudokuBoard {
       }
     }
     return false;
+  }
+
+  bool solve() { return solve_recursive(0); }
+
+  bool is_complete_and_valid() const {
+    for (int i = 0; i < 81; ++i) {
+      if (cells[i] == 0) return false;
+      int val = cells[i];
+      // Temporarily clear to check validity
+      const_cast<SudokuBoard*>(this)->cells[i] = 0;
+      bool valid = is_valid(i / 9, i % 9, val);
+      const_cast<SudokuBoard*>(this)->cells[i] = val;
+      if (!valid) return false;
+    }
+    return true;
   }
 };
 
@@ -157,6 +169,23 @@ void sudoku_print_impl(vsql::StringArg puzzle, vsql::StringResult out) try {
   out.error("Internal error in print_sudoku");
 }
 
+void is_valid_sudoku_impl(vsql::StringArg puzzle, vsql::IntResult out) try {
+  if (puzzle.is_null()) {
+    out.set_null();
+    return;
+  }
+
+  SudokuBoard board;
+  if (!board.load(puzzle.value())) {
+    out.set(0);
+    return;
+  }
+
+  out.set(board.is_complete_and_valid() ? 1 : 0);
+} catch (...) {
+  out.error("Internal error in is_valid_sudoku");
+}
+
 VEF_GENERATE_ENTRY_POINTS(
   vsql::make_extension()
     .func(vsql::make_func<&solve_sudoku_impl>("solve_sudoku")
@@ -169,6 +198,11 @@ VEF_GENERATE_ENTRY_POINTS(
       .returns(vsql::STRING)
       .param(vsql::STRING)
       .buffer_size(256)
+      .deterministic()
+      .build())
+    .func(vsql::make_func<&is_valid_sudoku_impl>("is_valid_sudoku")
+      .returns(vsql::INT)
+      .param(vsql::STRING)
       .deterministic()
       .build())
 )
